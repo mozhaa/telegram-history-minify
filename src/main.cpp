@@ -11,7 +11,7 @@
 int main(int argc, char *argv[]) {
     const std::size_t buffer_size = 1 << 25;
     std::unique_ptr<char> buffer(new char[buffer_size]);
-    
+
     fprintf(stderr, "Waiting for input from stdin...\n");
     rapidjson::FileReadStream is(stdin, buffer.get(), buffer_size);
     fprintf(stderr, "Parsing JSON...\n");
@@ -37,17 +37,36 @@ int main(int argc, char *argv[]) {
     const rapidjson::Value &messages_array = d["messages"];
     const rapidjson::SizeType num_messages = messages_array.Size();
 
-    fprintf(stderr, "Processing %u messages...\n", num_messages);
-
-    rapidjson::SizeType processed_count = 0;
-    for (rapidjson::SizeType i = 0; i < num_messages; ++i) {
+    std::unordered_map<int, unsigned int> msg_id_to_idx;
+    fprintf(stderr, "Indexing %u messages...\n", num_messages);
+    unsigned int processed_count = 0;
+    for (unsigned int i = 0; i < num_messages; ++i) {
         const auto &msg = messages_array.GetArray()[i];
 
         ++processed_count;
         if (processed_count == 1 || processed_count == num_messages ||
             (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
-            (num_messages <= 100 &&
-             processed_count % std::max<rapidjson::SizeType>(1, num_messages / 10) == 0)) {
+            (num_messages <= 100 && processed_count % std::max(1u, num_messages / 10) == 0)) {
+            int percentage = (processed_count * 100) / num_messages;
+            fprintf(stderr, "\rProgress: %d%%", percentage);
+        }
+
+        if (msg.HasMember("id") && msg["id"].IsInt()) {
+            msg_id_to_idx[msg["id"].GetInt()] = i;
+        }
+    }
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "Processing %u messages...\n", num_messages);
+
+    processed_count = 0;
+    for (unsigned int i = 0; i < num_messages; ++i) {
+        const auto &msg = messages_array.GetArray()[i];
+
+        ++processed_count;
+        if (processed_count == 1 || processed_count == num_messages ||
+            (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
+            (num_messages <= 100 && processed_count % std::max(1u, num_messages / 10) == 0)) {
             int percentage = (processed_count * 100) / num_messages;
             fprintf(stderr, "\rProgress: %d%%", percentage);
         }
@@ -86,7 +105,25 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        printf("[%s]: %s\n", sender.c_str(), text.c_str());
+        std::string reply_to = "";
+        bool is_reply = false;
+        if (msg.HasMember("reply_to_message_id") && msg["reply_to_message_id"].IsInt()) {
+            int reply_id = msg["reply_to_message_id"].GetInt();
+            const auto it = msg_id_to_idx.find(reply_id);
+            if (it != msg_id_to_idx.end()) {
+                const auto &old_msg = messages_array.GetArray()[it->second];
+                if (old_msg.HasMember("from") && old_msg["from"].IsString()) {
+                    reply_to = old_msg["from"].GetString();
+                    is_reply = true;
+                }
+            }
+        }
+
+        if (is_reply) {
+            printf("[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+        } else {
+            printf("[%s]: %s\n", sender.c_str(), text.c_str());
+        }
     }
 
     fprintf(stderr, "\n");
