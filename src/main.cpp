@@ -84,18 +84,6 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        std::string sender;
-        if (msg.HasMember("from") && msg["from"].IsString()) {
-            sender = msg["from"].GetString();
-        } else {
-            sender = "unknown";
-        }
-
-        std::string from_id;
-        if (msg.HasMember("from_id") && msg["from_id"].IsString()) {
-            from_id = msg["from_id"].GetString();
-        }
-
         std::string text;
         if (msg.HasMember("text")) {
             if (msg["text"].IsString()) {
@@ -120,6 +108,18 @@ int main(int argc, char *argv[]) {
 
         if (text.size() == 0) {
             continue;
+        }
+
+        std::string sender;
+        if (msg.HasMember("from") && msg["from"].IsString()) {
+            sender = msg["from"].GetString();
+        } else {
+            sender = "unknown";
+        }
+
+        std::string from_id;
+        if (msg.HasMember("from_id") && msg["from_id"].IsString()) {
+            from_id = msg["from_id"].GetString();
         }
 
         std::string reply_to = "";
