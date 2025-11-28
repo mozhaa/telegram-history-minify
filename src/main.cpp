@@ -111,6 +111,22 @@ int main(int argc, char *argv[]) {
             text = "*photo*";
         }
 
+        if (text.size() == 0 && msg.HasMember("media_type")) {
+            std::string media_type = msg["media_type"].GetString();
+            if (media_type == "sticker") {
+                if (msg.HasMember("sticker_emoji") && msg["sticker_emoji"].IsString()) {
+                    text = std::string("*sticker ") + msg["sticker_emoji"].GetString() + "*";
+                } else {
+                    throw std::runtime_error(
+                        "message with media_type=sticker has not 'sticker_emoji' member");
+                }
+            } else if (media_type == "video_file") {
+                text = "*video*";
+            } else if (media_type == "animation") {
+                text = "*gif*";
+            }
+        }
+
         if (text.size() == 0) {
             continue;
         }
@@ -156,7 +172,6 @@ int main(int argc, char *argv[]) {
             previous_from_id == from_id) {
             printf("%s\n", text.c_str());
         } else {
-            
             if (show_date || no_date_cnt > max_no_date_cnt) {
                 no_date_cnt = 0;
                 if (msg.HasMember("date") && msg["date"].IsString()) {
