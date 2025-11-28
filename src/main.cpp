@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (text.size() == 0 && msg.HasMember("photo")) {
-            text = "*photo*";
+        if (msg.HasMember("photo")) {
+            text = "*photo* " + text;
         }
 
         if (text.size() == 0 && msg.HasMember("media_type")) {
