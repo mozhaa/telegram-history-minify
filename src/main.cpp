@@ -8,6 +8,10 @@
 #include <unordered_map>
 #include <vector>
 
+const std::size_t buffer_size = 1 << 25;
+const int min_time_gap = 3600;
+const int max_no_date_cnt = 100;
+
 class progress_bar {
     unsigned int _count;
     unsigned int _limit;
@@ -35,7 +39,6 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-    const std::size_t buffer_size = 1 << 25;
     std::unique_ptr<char> buffer(new char[buffer_size]);
 
     fprintf(stderr, "Waiting for input from stdin...\n");
@@ -67,6 +70,8 @@ int main(int argc, char *argv[]) {
 
     std::unordered_map<int, unsigned int> msg_id_to_idx;
     std::string previous_from_id = "";
+    int previous_time = 0;
+    int no_date_cnt = 0;
     progress_bar pb(num_messages);
     for (unsigned int i = 0; i < num_messages; ++i, pb.increment()) {
         const auto &msg = messages_array.GetArray()[i];
@@ -136,13 +141,38 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (is_reply) {
-            printf("===\n[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+        bool show_date = false;
+        if (msg.HasMember("date_unixtime") && msg["date_unixtime"].IsString()) {
+            int time = std::stoi(msg["date_unixtime"].GetString());
+            if (time - previous_time > min_time_gap) {
+                show_date = true;
+            }
+            previous_time = time;
         } else {
-            if (from_id.size() > 0 && previous_from_id.size() > 0 && previous_from_id == from_id) {
-                printf("%s\n", text.c_str());
+            throw std::runtime_error("message has no 'date_unixtime' member");
+        }
+
+        if (!is_reply && from_id.size() > 0 && previous_from_id.size() > 0 &&
+            previous_from_id == from_id) {
+            printf("%s\n", text.c_str());
+        } else {
+            
+            if (show_date || no_date_cnt > max_no_date_cnt) {
+                no_date_cnt = 0;
+                if (msg.HasMember("date") && msg["date"].IsString()) {
+                    printf("### DATE: %s\n", msg["date"].GetString());
+                } else {
+                    throw std::runtime_error("message has no 'date' member");
+                }
             } else {
-                printf("===\n[%s]: %s\n", sender.c_str(), text.c_str());
+                printf("###\n");
+                ++no_date_cnt;
+            }
+
+            if (is_reply) {
+                printf("[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+            } else {
+                printf("[%s]: %s\n", sender.c_str(), text.c_str());
             }
         }
 
