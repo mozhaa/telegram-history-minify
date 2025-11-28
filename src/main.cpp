@@ -57,6 +57,10 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        if (msg.HasMember("id") && msg["id"].IsInt()) {
+            msg_id_to_idx[msg["id"].GetInt()] = i;
+        }
+
         if (msg.HasMember("type") && msg["type"].IsString() &&
             std::string_view(msg["type"].GetString()) == "service") {
             continue;
@@ -92,6 +96,14 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        if (text.size() == 0 && msg.HasMember("photo")) {
+            text = "*photo*";
+        }
+
+        if (text.size() == 0) {
+            continue;
+        }
+
         std::string reply_to = "";
         bool is_reply = false;
         if (msg.HasMember("reply_to_message_id") && msg["reply_to_message_id"].IsInt()) {
@@ -106,26 +118,17 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (text.size() > 0) {
-            if (is_reply) {
-                printf("===\n[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
-            } else {
-                if (from_id.size() > 0 && previous_from_id.size() > 0 &&
-                    previous_from_id == from_id) {
-                    printf("%s\n", text.c_str());
-                } else {
-                    printf("===\n[%s]: %s\n", sender.c_str(), text.c_str());
-                }
-            }
-
-            previous_from_id = std::move(from_id);
+        if (is_reply) {
+            printf("===\n[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
         } else {
-            previous_from_id.clear();
+            if (from_id.size() > 0 && previous_from_id.size() > 0 && previous_from_id == from_id) {
+                printf("%s\n", text.c_str());
+            } else {
+                printf("===\n[%s]: %s\n", sender.c_str(), text.c_str());
+            }
         }
 
-        if (msg.HasMember("id") && msg["id"].IsInt()) {
-            msg_id_to_idx[msg["id"].GetInt()] = i;
-        }
+        previous_from_id = std::move(from_id);
     }
 
     fprintf(stderr, "\n");
