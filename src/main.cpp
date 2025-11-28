@@ -11,7 +11,10 @@
 int main(int argc, char *argv[]) {
     const std::size_t buffer_size = 1 << 25;
     std::unique_ptr<char> buffer(new char[buffer_size]);
+    
+    fprintf(stderr, "Waiting for input from stdin...\n");
     rapidjson::FileReadStream is(stdin, buffer.get(), buffer_size);
+    fprintf(stderr, "Parsing JSON...\n");
 
     rapidjson::Document d;
     rapidjson::ParseResult parse_ok = d.ParseStream(is);
@@ -34,7 +37,19 @@ int main(int argc, char *argv[]) {
     const rapidjson::Value &messages_array = d["messages"];
     const rapidjson::SizeType num_messages = messages_array.Size();
 
+    fprintf(stderr, "Processing %u messages...\n", num_messages);
+
+    rapidjson::SizeType processed_count = 0;
     for (const auto &message_value : messages_array.GetArray()) {
+        ++processed_count;
+        if (processed_count == 1 || processed_count == num_messages ||
+            (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
+            (num_messages <= 100 &&
+             processed_count % std::max<rapidjson::SizeType>(1, num_messages / 10) == 0)) {
+            int percentage = (processed_count * 100) / num_messages;
+            fprintf(stderr, "\rProgress: %d%%", percentage);
+        }
+
         if (!message_value.IsObject()) {
             continue;
         }
@@ -72,5 +87,6 @@ int main(int argc, char *argv[]) {
         printf("[%s]: %s\n", sender.c_str(), text.c_str());
     }
 
+    fprintf(stderr, "\n");
     return 0;
 }
