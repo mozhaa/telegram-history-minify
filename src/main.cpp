@@ -108,13 +108,13 @@ int main(int argc, char *argv[]) {
 
         if (text.size() > 0) {
             if (is_reply) {
-                printf("[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+                printf("===\n[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
             } else {
                 if (from_id.size() > 0 && previous_from_id.size() > 0 &&
                     previous_from_id == from_id) {
                     printf("%s\n", text.c_str());
                 } else {
-                    printf("[%s]: %s\n", sender.c_str(), text.c_str());
+                    printf("===\n[%s]: %s\n", sender.c_str(), text.c_str());
                 }
             }
 
