@@ -40,7 +40,9 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Processing %u messages...\n", num_messages);
 
     rapidjson::SizeType processed_count = 0;
-    for (const auto &message_value : messages_array.GetArray()) {
+    for (rapidjson::SizeType i = 0; i < num_messages; ++i) {
+        const auto &msg = messages_array.GetArray()[i];
+
         ++processed_count;
         if (processed_count == 1 || processed_count == num_messages ||
             (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
@@ -50,29 +52,29 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "\rProgress: %d%%", percentage);
         }
 
-        if (!message_value.IsObject()) {
+        if (!msg.IsObject()) {
             continue;
         }
 
-        if (message_value.HasMember("type") && message_value["type"].IsString() &&
-            std::string_view(message_value["type"].GetString()) == "service") {
+        if (msg.HasMember("type") && msg["type"].IsString() &&
+            std::string_view(msg["type"].GetString()) == "service") {
             continue;
         }
 
         std::string sender;
-        if (message_value.HasMember("from") && message_value["from"].IsString()) {
-            sender = message_value["from"].GetString();
+        if (msg.HasMember("from") && msg["from"].IsString()) {
+            sender = msg["from"].GetString();
         } else {
             sender = "unknown";
         }
 
         std::string text;
-        if (message_value.HasMember("text")) {
-            if (message_value["text"].IsString()) {
-                text = message_value["text"].GetString();
-            } else if (message_value["text"].IsArray()) {
+        if (msg.HasMember("text")) {
+            if (msg["text"].IsString()) {
+                text = msg["text"].GetString();
+            } else if (msg["text"].IsArray()) {
                 std::stringstream ss;
-                for (const auto &text_elem : message_value["text"].GetArray()) {
+                for (const auto &text_elem : msg["text"].GetArray()) {
                     if (text_elem.IsObject() && text_elem.HasMember("text") &&
                         text_elem["text"].IsString()) {
                         ss << text_elem["text"].GetString();
