@@ -1,0 +1,9 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+PointerAlignment: Right
+ColumnLimit: 100
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+PackConstructorInitializers: CurrentLine
+SortIncludes: true
+IncludeBlocks: Regroup
