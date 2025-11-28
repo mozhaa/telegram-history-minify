@@ -8,6 +8,32 @@
 #include <unordered_map>
 #include <vector>
 
+class progress_bar {
+    unsigned int _count;
+    unsigned int _limit;
+
+    void _update() {
+        if (_count == 1 || _count == _limit || (_limit > 100 && _count % (_limit / 100) == 0) ||
+            (_limit <= 100 && _count % std::max(1u, _limit / 10) == 0)) {
+            _print();
+        }
+    }
+
+    void _print() {
+        int percentage = (_count * 100) / _limit;
+        fprintf(stderr, "\rProgress: %d%%", percentage);
+    }
+
+public:
+    progress_bar(unsigned int limit) : _count(0), _limit(limit) {}
+    ~progress_bar() { fprintf(stderr, "\n"); }
+
+    void increment() {
+        _count++;
+        _update();
+    }
+};
+
 int main(int argc, char *argv[]) {
     const std::size_t buffer_size = 1 << 25;
     std::unique_ptr<char> buffer(new char[buffer_size]);
@@ -41,17 +67,9 @@ int main(int argc, char *argv[]) {
 
     std::unordered_map<int, unsigned int> msg_id_to_idx;
     std::string previous_from_id = "";
-    unsigned int processed_count = 0;
-    for (unsigned int i = 0; i < num_messages; ++i) {
+    progress_bar pb(num_messages);
+    for (unsigned int i = 0; i < num_messages; ++i, pb.increment()) {
         const auto &msg = messages_array.GetArray()[i];
-
-        ++processed_count;
-        if (processed_count == 1 || processed_count == num_messages ||
-            (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
-            (num_messages <= 100 && processed_count % std::max(1u, num_messages / 10) == 0)) {
-            int percentage = (processed_count * 100) / num_messages;
-            fprintf(stderr, "\rProgress: %d%%", percentage);
-        }
 
         if (!msg.IsObject()) {
             continue;
@@ -131,6 +149,5 @@ int main(int argc, char *argv[]) {
         previous_from_id = std::move(from_id);
     }
 
-    fprintf(stderr, "\n");
     return 0;
 }
