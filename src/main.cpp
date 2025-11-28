@@ -37,29 +37,11 @@ int main(int argc, char *argv[]) {
     const rapidjson::Value &messages_array = d["messages"];
     const rapidjson::SizeType num_messages = messages_array.Size();
 
-    std::unordered_map<int, unsigned int> msg_id_to_idx;
-    fprintf(stderr, "Indexing %u messages...\n", num_messages);
-    unsigned int processed_count = 0;
-    for (unsigned int i = 0; i < num_messages; ++i) {
-        const auto &msg = messages_array.GetArray()[i];
-
-        ++processed_count;
-        if (processed_count == 1 || processed_count == num_messages ||
-            (num_messages > 100 && processed_count % (num_messages / 100) == 0) ||
-            (num_messages <= 100 && processed_count % std::max(1u, num_messages / 10) == 0)) {
-            int percentage = (processed_count * 100) / num_messages;
-            fprintf(stderr, "\rProgress: %d%%", percentage);
-        }
-
-        if (msg.HasMember("id") && msg["id"].IsInt()) {
-            msg_id_to_idx[msg["id"].GetInt()] = i;
-        }
-    }
-    fprintf(stderr, "\n");
-
     fprintf(stderr, "Processing %u messages...\n", num_messages);
 
-    processed_count = 0;
+    std::unordered_map<int, unsigned int> msg_id_to_idx;
+    std::string previous_from_id = "";
+    unsigned int processed_count = 0;
     for (unsigned int i = 0; i < num_messages; ++i) {
         const auto &msg = messages_array.GetArray()[i];
 
@@ -85,6 +67,11 @@ int main(int argc, char *argv[]) {
             sender = msg["from"].GetString();
         } else {
             sender = "unknown";
+        }
+
+        std::string from_id;
+        if (msg.HasMember("from_id") && msg["from_id"].IsString()) {
+            from_id = msg["from_id"].GetString();
         }
 
         std::string text;
@@ -119,10 +106,25 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (is_reply) {
-            printf("[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+        if (text.size() > 0) {
+            if (is_reply) {
+                printf("[%s](-> %s): %s\n", sender.c_str(), reply_to.c_str(), text.c_str());
+            } else {
+                if (from_id.size() > 0 && previous_from_id.size() > 0 &&
+                    previous_from_id == from_id) {
+                    printf("%s\n", text.c_str());
+                } else {
+                    printf("[%s]: %s\n", sender.c_str(), text.c_str());
+                }
+            }
+
+            previous_from_id = std::move(from_id);
         } else {
-            printf("[%s]: %s\n", sender.c_str(), text.c_str());
+            previous_from_id.clear();
+        }
+
+        if (msg.HasMember("id") && msg["id"].IsInt()) {
+            msg_id_to_idx[msg["id"].GetInt()] = i;
         }
     }
 
