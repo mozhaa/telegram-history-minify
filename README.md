@@ -74,7 +74,9 @@ The tool produces a clean, readable format:
 ```
 ### DATE: 2023-01-01T12:00:00
 [John Doe]: Hello, world!
+###
 [Jane Smith]: Hi there!
+###
 [John Doe]: How are you?
 ```
 
